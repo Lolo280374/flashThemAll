@@ -67,7 +67,11 @@ function maininit_menu() {
                 echo -e "now extracting the ventoy installer!"
                 mkdir -p $tmp_dir/ventoy
                 tar -xzf "$tmp_dir/ventoy.tar.gz" -C "$tmp_dir/ventoy"
-                ls "$tmp_dir/ventoy"
+                cd "$tmp_dir/ventoy/ventoy-$latest_build/"
+                echo -e ""
+                echo -e "ventoy installation will now begin. please specify which device do you want to install ventoy on. (e.g: 'sda')"
+                read -r -p "which device? " device_sel
+                ./Ventoy2Disk.sh -I /dev/$device_sel
                 ;;
             3)
                 echo -e "hi"
