@@ -48,6 +48,7 @@ function maininit_menu() {
     echo "3) flash a custom ISO on a drive"
     echo "4) download an ISO from the archive list and flash it"
     echo "5) install GRUB bootloader to drive"
+    echo "6) clean the temp directory (useful if you are encountering errors)"
     echo "q) quit"
         
         read -r -p "your selection: " selection
@@ -64,14 +65,28 @@ function maininit_menu() {
                 echo -e "grabbing the latest release of ventoy..."
                 echo -e "the files will be saved in "$tmp_dir"."
                 dl_ventoy_latest
-                echo -e "now extracting the ventoy installer!"
-                mkdir -p $tmp_dir/ventoy
-                tar -xzf "$tmp_dir/ventoy.tar.gz" -C "$tmp_dir/ventoy"
+
+                if [[ ! -d "$tmp_dir/ventoy/ventoy-$latest_build/" ]]; then
+                    echo "now extracting the ventoy installer!"
+                    mkdir -p "$tmp_dir/ventoy"
+                    tar -xzf "$tmp_dir/ventoy.tar.gz" -C "$tmp_dir/ventoy"
+                else
+                    echo "ventoy installer seems to already exist, skipping extraction..."
+                fi
+
                 cd "$tmp_dir/ventoy/ventoy-$latest_build/"
                 echo -e ""
                 echo -e "ventoy installation will now begin. please specify which device do you want to install ventoy on. (e.g: 'sda')"
                 read -r -p "which device? " device_sel
-                ./Ventoy2Disk.sh -I /dev/$device_sel
+
+                if [[ $EUID -ne 0 ]]; then
+                    echo "ventoy requires elevated privileges to continue. please authenticate:"
+                    is_elevated="sudo"
+                else
+                    is_elevated=""
+                fi
+                
+                $is_elevated ./Ventoy2Disk.sh -I /dev/$device_sel
                 ;;
             3)
                 echo -e "hi"
@@ -81,6 +96,28 @@ function maininit_menu() {
                 ;;
             5)
                 echo -e "hi"
+                ;;
+            6)
+                echo -e ""
+                echo -e "this action will completely delete the temp directory for flashThemAll. any saved ISOs, images, and ventoy installers will be erased."
+                read -r -p "are you sure to continue? (y/n) " tmp_del_confirm
+
+                if [[ "$tmp_del_confirm" == "y" || "$tmp_del_confirm" == "Y" ]]; then
+
+                    if [[ $EUID -ne 0 ]]; then
+                        echo "this operation requires elevated privileges to continue. please authenticate:"
+                        is_elevated="sudo"
+                    else
+                        is_elevated=""
+                    fi
+                    
+                    $is_elevated rm -rf "$tmp_dir/"
+                    echo -e "the temp folder has been deleted!"
+                    echo -e ""
+                else
+                    echo "deletion aborted, as you cancelled..."
+                    echo -e ""
+                fi
                 ;;
             q|Q)
                 echo -e "exiting..."
