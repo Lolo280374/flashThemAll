@@ -59,7 +59,9 @@ function maininit_menu() {
                 echo -e "here are the list of drives and their partitions avalaible on your system:"
                 echo -e ""
                 lsblk
+                echo -e ""
                 echo -e "returning to main menu."
+                echo -e ""
                 ;;
             2)
                 echo -e ""
@@ -243,7 +245,9 @@ function maininit_menu() {
                 break
                 ;;
             *)
+                echo -e ""
                 echo -e "thats not a valid option!"
+                echo -e ""
                 ;;
         esac
     done
