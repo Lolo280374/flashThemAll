@@ -3,6 +3,14 @@
 #released for hackclub!
 #simple CLI tool to flash (anything) to (anything)!!
 
+if [[ "$(uname)" == "Darwin" ]]; then
+    echo -e ""
+    echo -e "macOS is not supported. (or it might, but stuff might crap out, idk)"
+    echo -e "u should use Linux if you want this to work."
+    echo -e ""
+    exit 1
+fi
+
 system_arch=$([[ "$(uname -m)" == "x86_64" ]] && printf "amd64" || printf "arm64")
 
 function starthebanner {
