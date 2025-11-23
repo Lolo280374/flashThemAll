@@ -35,11 +35,32 @@ function dl_ventoy_latest() {
     echo -e ""
 
     if [[ $curl_exit -ne 0 ]]; then
-        echo -e "curl failed to download your file. please try again!"
+        echo -e "curl failed to download the file. please try again!"
         return 1
     fi
 
     echo "download seems to have succeded, proceeding!"
+}
+
+function dl_systemrescue_latest() {
+    latest_sysresc_build=$(curl -s  curl -s https://www.system-rescue.org/Download/ \
+    | grep -o "systemrescue-[0-9.]\+-amd64.iso" \
+    | head -n 1 \
+    | sed 's/systemrescue-\|\-amd64.iso//g')
+    
+    sysresc_dl_url="https://fastly-cdn.system-rescue.org/releases/$latest_sysresc_build/systemrescue-$latest_sysresc_build-amd64.iso"
+    echo -e "now downloading the SystemRescue ISO image!"
+    curl -L -o "$tmp_dir/systemrescue-$latest_sysresc_build.iso" "$sysresc_dl_url"
+
+    curl_exit=$?
+    echo -e ""
+
+    if [[ $curl_exit -ne 0 ]]; then
+        echo -e "curl failed to download the file. please try again!"
+        return 1
+    fi
+
+    echo -e "download seems to have succeded, proceeding!"
 }
 
 function make_tmp_dir() {
@@ -56,7 +77,7 @@ function maininit_menu() {
     echo "3) flash a custom ISO on a drive (isohybrid)"
     echo "4) flash a non-isohybrid image on a drive (e.g: windows ISOs)"
     echo "5) download an ISO from the archive list and flash it"
-    echo "6) install GRUB bootloader to drive"
+    echo "6) install SystemRescue to a drive (recovery tool-packed boot drive)"
     echo "7) clean the temp directory (useful if you are encountering errors)"
     echo "q) quit"
         
@@ -224,7 +245,61 @@ function maininit_menu() {
                 echo -e "for reference, your architecture is: $system_arch"
                 ;;
             6)
-                echo -e "hi"
+                echo -e ""
+                echo -e "this feature will install SystemRescue to your drive, an open-source feature-packed recovery tool. it is based on Linux."
+                echo -e "to learn more, please visit 'system-rescue.org'!"
+
+                read -r -p "do you wish to continue? (y/n) " sysresc_confirm_prompt
+                if [[ "$sysresc_confirm_prompt" != "y" && "$sysresc_confirm_prompt" != "Y" ]]; then
+                    echo -e ""
+                    echo -e "okay, exiting!"
+                    echo -e ""
+                    break
+                fi
+
+                echo -e ""
+                echo -e "great! please now specify which device do you wish to install SystemRescue to. (e.g: sdb)"
+                echo -e "to list the devices avalaible on your system, you can use the 1st option in the main menu..."
+
+                read -r -p "which device? " sysresc_device_prompt
+                if [[ ! -b "/dev/$sysresc_device_prompt" ]]; then
+                    echo -e ""
+                    echo -e "sorry, but the device you provided dosen't seem to exist. please check from the 1st tool in the main menu!"
+                    echo -e "(for reference, tried checking for: /dev/$sysresc_device_prompt)."
+                    echo -e ""
+                    break
+                fi
+
+                echo -e ""
+                echo -e "that device looks like a valid block device!"
+
+                echo -e "the tool will now start downloading the image and flashing it."
+                echo -e "note: a prompt to elevate the flash process might appear later!"
+                echo -e ""
+                dl_systemrescue_latest
+
+                echo -e ""
+                echo -e "the image will now be flashed to your device."
+                cd "$tmp_dir/"
+
+                echo -e ""
+                echo -e "just in case, unmounting your device's partitions..."
+
+                if [[ $EUID -ne 0 ]]; then
+                    echo "the flash process requires elevated privileges to continue. please authenticate:"
+                    is_elevated="sudo"
+                else
+                    is_elevated=""
+                fi
+                $is_elevated umount /dev/${sysresc_device_prompt}*
+
+                echo -e ""
+                echo -e "now flashing the image to '$sysresc_device_prompt'!!! (please do NOT DISCONNECT OR UNMOUNT THE DEVICE.)"
+                $is_elevated dd if="$tmp_dir/systemrescue-$latest_sysresc_build.iso" of="/dev/$sysresc_device_prompt" bs=4M status=progress oflag=sync
+                
+                echo -e ""
+                echo -e "systemRescue seems to have been successfully flashed to your device! :D"
+                echo -e ""
                 ;;
             7)
                 echo -e ""
@@ -249,7 +324,9 @@ function maininit_menu() {
                 fi
                 ;;
             q|Q)
+                echo -e ""
                 echo -e "exiting..."
+                echo -e ""
                 break
                 ;;
             *)
